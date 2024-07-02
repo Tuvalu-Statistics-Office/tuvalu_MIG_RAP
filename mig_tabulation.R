@@ -230,7 +230,6 @@ pt$writeToExcelWorksheet(wb=wb, wsName="tableD5",
 #--------------------------------------------------------------------------------------------------------------
 #Table 6: Resident departure by nationality and month by sex
 #--------------------------------------------------------------------------------------------------------------
-tableA2 <- dbGetQuery(mydb, "SELECT * FROM departure WHERE year = 2024 and resident = Resident")
 pt <- PivotTable$new()
 pt$addData(tableA2)
 pt$addColumnDataGroups("month")
@@ -244,7 +243,6 @@ pt$writeToExcelWorksheet(wb=wb, wsName="tableD6",
 #--------------------------------------------------------------------------------------------------------------
 #Table 7: Resident departure by days away group and month by sex
 #--------------------------------------------------------------------------------------------------------------
-tableA2 <- dbGetQuery(mydb, "SELECT * FROM departure WHERE year = 2024 and resident = Resident")
 pt <- PivotTable$new()
 pt$addData(tableA2)
 pt$addColumnDataGroups("month")
@@ -258,7 +256,7 @@ pt$writeToExcelWorksheet(wb=wb, wsName="tableD7",
 #--------------------------------------------------------------------------------------------------------------
 #Table 8: Visitors departure by region and month by sex
 #--------------------------------------------------------------------------------------------------------------
-tableA3 <- dbGetQuery(mydb, "SELECT * FROM departure WHERE year = 2024 and resident = Visitor")
+tableA3 <- dbGetQuery(mydb, "SELECT * FROM departure WHERE resident = 'Visitor' AND year = 2024")
 pt <- PivotTable$new()
 pt$addData(tableA3)
 pt$addColumnDataGroups("month")
