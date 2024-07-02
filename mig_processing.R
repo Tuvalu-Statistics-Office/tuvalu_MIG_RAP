@@ -83,7 +83,7 @@ arrivals$year = year(arrivals$dateArrival)
 #Step 1.3 - Check for years that may be incorrect. Drop record if it cannot be corrected.
 curYearA <- max(arrivals$year)
 arrivals$curYearA <- curYearA
-arrivals <- arrivals[arrivals$year > curYear-10, ]
+arrivals <- arrivals[arrivals$year > curYearA-10, ]
 #!!!Note: Dropping is a result of incorrect dates. ASO should check the dates.
 
 #Step 1.4 - Get country description, region code, and region description
@@ -248,7 +248,17 @@ departure$daysAwayGroup[is.na(departure$daysAwayGroup)] <- "Missing"
 #!!!Note: There are cases where dates are entered as days away. ASO to note that this variable requires
 # the number of days away. ASO to calculate this number if a date is entered in the forms.
 
+departure$resident <- ifelse(departure$resident==1,"Resident","Visitor")
+departure$sex <- ifelse(departure$sex==1,"Male","Female")
+departure$transport <- ifelse(departure$transport==1,"Air","Sea")
+purpTravel <- read_excel("data/purpVisit.xlsx")
+colnames(purpTravel)[colnames(purpTravel) == "purpVisit"] <- "purpTravel"
+colnames(purpTravel)[colnames(purpTravel) == "purpVisitDesc"] <- "purpTravelDesc"
+departure <- merge(departure, purpTravel, by = "purpTravel", all = TRUE) #merge files
+
 #Step 2.9 - Write departure to db
 departure <- departure[!is.na(departure$flightship), ]
 departure$N <- 1
 dbWriteTable(mydb, "departure", departure, overwrite = TRUE)
+
+#dbDisconnect(mydb)

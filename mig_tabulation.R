@@ -39,9 +39,11 @@ arrivals <- merge(arrivals, arrCountry, by = "countryName", all = TRUE)
 arrivals$selectedCountry <- ifelse(arrivals$Selected==1,arrivals$countryName,"Other")
 dbWriteTable(mydb, "arrivals", arrivals, overwrite = TRUE)
 
+arrCountry <- dbGetQuery(mydb, "SELECT * FROM arrivals WHERE year = 2024")
+
 pt <- PivotTable$new()
-pt$addData(tableA1)
-pt$addColumnDataGroups("monthDesc")
+pt$addData(arrCountry)
+pt$addColumnDataGroups("month")
 pt$addColumnDataGroups("sex")
 pt$addRowDataGroups("selectedCountry")
 pt$defineCalculation(calculationName="TotalVisitors", summariseExpression="format(round(sum(N), 0), big.mark = ',')")
@@ -53,8 +55,8 @@ pt$writeToExcelWorksheet(wb=wb, wsName="tableA1",
 #Table 2 - Visitors arrivals by purpose of visit, month, and sex
 #--------------------------------------------------------------------------------------------------------------
 pt <- PivotTable$new()
-pt$addData(tableA1)
-pt$addColumnDataGroups("monthDesc")
+pt$addData(arrCountry)
+pt$addColumnDataGroups("month")
 pt$addColumnDataGroups("sex")
 pt$addRowDataGroups("purpVisitDesc")
 pt$defineCalculation(calculationName="TotalVisitors", summariseExpression="format(round(sum(N), 0), big.mark = ',')")
@@ -66,7 +68,7 @@ pt$writeToExcelWorksheet(wb=wb, wsName="tableA2",
 #Table 3 - Visitors arrivals by nationality, purpose of visit, and sex
 #--------------------------------------------------------------------------------------------------------------
 pt <- PivotTable$new()
-pt$addData(tableA1)
+pt$addData(arrCountry)
 pt$addColumnDataGroups("purpVisitDesc")
 pt$addColumnDataGroups("sex")
 pt$addRowDataGroups("selectedCountry")
@@ -81,7 +83,7 @@ pt$writeToExcelWorksheet(wb=wb, wsName="tableA3",
 tableA1 <- dbGetQuery(mydb, "SELECT * FROM arrivals WHERE resident = Resident AND year = 2024")
 pt <- PivotTable$new()
 pt$addData(tableA1)
-pt$addColumnDataGroups("monthDesc")
+pt$addColumnDataGroups("month")
 pt$addColumnDataGroups("sex")
 pt$addRowDataGroups("countryName")
 pt$defineCalculation(calculationName="TotalVisitors", summariseExpression="format(round(sum(N), 0), big.mark = ',')")
@@ -203,7 +205,7 @@ pt$writeToExcelWorksheet(wb=wb, wsName="tableD3",
 tableA1 <- dbGetQuery(mydb, "SELECT * FROM departure WHERE year = 2024")
 pt <- PivotTable$new()
 pt$addData(tableA1)
-pt$addColumnDataGroups("purpTravel")
+pt$addColumnDataGroups("purpTravelDesc")
 pt$addColumnDataGroups("sex")
 pt$addRowDataGroups("month")
 pt$defineCalculation(calculationName="TotalDepartures", summariseExpression="format(round(sum(N), 0), big.mark = ',')")
@@ -214,10 +216,10 @@ pt$writeToExcelWorksheet(wb=wb, wsName="tableD4",
 #--------------------------------------------------------------------------------------------------------------
 #Table 5: Resident departure by months and purpose of travel by sex
 #--------------------------------------------------------------------------------------------------------------
-tableA2 <- dbGetQuery(mydb, "SELECT * FROM departure WHERE year = 2024 and resident = 1")
+tableA2 <- dbGetQuery(mydb, "SELECT * FROM departure WHERE year = 2024 and resident = Resident")
 pt <- PivotTable$new()
 pt$addData(tableA2)
-pt$addColumnDataGroups("purpTravel")
+pt$addColumnDataGroups("purpTravelDesc")
 pt$addColumnDataGroups("sex")
 pt$addRowDataGroups("month")
 pt$defineCalculation(calculationName="TotalDepartures", summariseExpression="format(round(sum(N), 0), big.mark = ',')")
@@ -228,7 +230,7 @@ pt$writeToExcelWorksheet(wb=wb, wsName="tableD5",
 #--------------------------------------------------------------------------------------------------------------
 #Table 6: Resident departure by nationality and month by sex
 #--------------------------------------------------------------------------------------------------------------
-tableA2 <- dbGetQuery(mydb, "SELECT * FROM departure WHERE year = 2024 and resident = 1")
+tableA2 <- dbGetQuery(mydb, "SELECT * FROM departure WHERE year = 2024 and resident = Resident")
 pt <- PivotTable$new()
 pt$addData(tableA2)
 pt$addColumnDataGroups("month")
@@ -242,7 +244,7 @@ pt$writeToExcelWorksheet(wb=wb, wsName="tableD6",
 #--------------------------------------------------------------------------------------------------------------
 #Table 7: Resident departure by days away group and month by sex
 #--------------------------------------------------------------------------------------------------------------
-tableA2 <- dbGetQuery(mydb, "SELECT * FROM departure WHERE year = 2024 and resident = 1")
+tableA2 <- dbGetQuery(mydb, "SELECT * FROM departure WHERE year = 2024 and resident = Resident")
 pt <- PivotTable$new()
 pt$addData(tableA2)
 pt$addColumnDataGroups("month")
@@ -256,7 +258,7 @@ pt$writeToExcelWorksheet(wb=wb, wsName="tableD7",
 #--------------------------------------------------------------------------------------------------------------
 #Table 8: Visitors departure by region and month by sex
 #--------------------------------------------------------------------------------------------------------------
-tableA3 <- dbGetQuery(mydb, "SELECT * FROM departure WHERE year = 2024 and resident = 2")
+tableA3 <- dbGetQuery(mydb, "SELECT * FROM departure WHERE year = 2024 and resident = Visitor")
 pt <- PivotTable$new()
 pt$addData(tableA3)
 pt$addColumnDataGroups("month")
