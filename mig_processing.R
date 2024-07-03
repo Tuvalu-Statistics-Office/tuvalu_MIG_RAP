@@ -255,6 +255,9 @@ purpTravel <- read_excel("data/purpVisit.xlsx")
 colnames(purpTravel)[colnames(purpTravel) == "purpVisit"] <- "purpTravel"
 colnames(purpTravel)[colnames(purpTravel) == "purpVisitDesc"] <- "purpTravelDesc"
 departure <- merge(departure, purpTravel, by = "purpTravel", all = TRUE) #merge files
+monthtab <- read_excel("data/month.xlsx")
+departure <- merge(departure, monthtab, by = "month", all = TRUE) #merge files
+departure <- departure[!is.na(departure$flightship), ] #drop empty rows
 
 #Step 2.9 - Write departure to db
 departure <- departure[!is.na(departure$flightship), ]
