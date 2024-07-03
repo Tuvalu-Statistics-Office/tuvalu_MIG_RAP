@@ -262,3 +262,5 @@ departure$N <- 1
 dbWriteTable(mydb, "departure", departure, overwrite = TRUE)
 
 #dbDisconnect(mydb)
+
+#source("mig_tabulation.R")
