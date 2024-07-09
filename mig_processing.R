@@ -99,7 +99,7 @@ arrivals$regionCode[is.na(arrivals$regionCode)] <- "Missing"
 
 #Step 1.5 - Generate resident status
 arrivals$resident <- ifelse(arrivals$countryCode==3609,1,2)
-arrivals$resident <- ifelse(arrivals$purpVisit==1,1,2)
+#arrivals$resident <- ifelse(arrivals$purpVisit==1,1,2)
 #!!!Note: ASO to check residency. Tuvalu nationals should be residents. There are cases when this is not true.
 # Classifying such cases as non-resident should be carefully considered.
 
@@ -251,9 +251,8 @@ departure$daysAwayGroup[is.na(departure$daysAwayGroup)] <- "Missing"
 departure$resident <- ifelse(departure$resident==1,"Resident","Visitor")
 departure$sex <- ifelse(departure$sex==1,"Male","Female")
 departure$transport <- ifelse(departure$transport==1,"Air","Sea")
-purpTravel <- read_excel("data/purpVisit.xlsx")
-colnames(purpTravel)[colnames(purpTravel) == "purpVisit"] <- "purpTravel"
-colnames(purpTravel)[colnames(purpTravel) == "purpVisitDesc"] <- "purpTravelDesc"
+
+purpTravel <- read_excel("data/purpTravel.xlsx")
 departure <- merge(departure, purpTravel, by = "purpTravel", all = TRUE) #merge files
 monthtab <- read_excel("data/month.xlsx")
 departure <- merge(departure, monthtab, by = "month", all = TRUE) #merge files
