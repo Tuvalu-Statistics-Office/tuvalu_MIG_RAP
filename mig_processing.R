@@ -98,8 +98,8 @@ arrivals$regionCode[is.na(arrivals$regionCode)] <- "Missing"
 #particularly people with Tuvaluan passports should be Tuvaluan nationals.
 
 #Step 1.5 - Generate resident status
+arrivals$resident <- ifelse(arrivals$purpVisit==1,1,2)
 arrivals$resident <- ifelse(arrivals$countryCode==3609,1,2)
-#arrivals$resident <- ifelse(arrivals$purpVisit==1,1,2)
 #!!!Note: ASO to check residency. Tuvalu nationals should be residents. There are cases when this is not true.
 # Classifying such cases as non-resident should be carefully considered.
 
@@ -119,13 +119,14 @@ arrivals <- merge(arrivals, age_group, by = "age", all = TRUE)
 #Need to research how to use nested if statements. Use merge for now.
 #Calculate duration of stay
 arrivals$dateDep <- ymd(arrivals$durStay)
-arrivals$durStayCalc <- arrivals$dateDep - arrivals$dateArrival
-durStay_Group <- read_excel("data/durStay_Group.xlsx")
-arrivals <- merge(arrivals, durStay_Group, by = "durStayCalc", all = TRUE) #merge files
-arrivals$stayAwayGroup[is.na(arrivals$stayAwayGroup)] <- "Missing"
-arrivals <- arrivals[!is.na(arrivals$flightship), ] #drop empty rows
-#!!!Note: There are cases where dates are entered as days away. ASO to note that this variable requires
-# the number of days away. ASO to calculate this number if a date is entered in the forms.
+arrivals$durStayCalc <- arrivals$dateDep - arrivals$dateArrival #Need to process other records
+arrivals$stayAwayGroup <- ifelse(arrivals$durStayCalc <= 8, "<8",
+                        ifelse(arrivals$durStayCalc > 8 & arrivals$durStayCalc<=14, "9-14",
+                               ifelse(arrivals$durStayCalc > 14 & arrivals$durStayCalc<=30, "15-30",
+                                      ifelse(arrivals$durStayCalc > 30 & arrivals$durStayCalc<=90, "31-90",
+                                             ifelse(arrivals$durStayCalc > 90 & arrivals$durStayCalc<=180, "91-180",
+                                                    ifelse(arrivals$durStayCalc > 180 & arrivals$durStayCalc<=360, "181-360",
+                                                           ifelse(arrivals$durStayCalc > 360,">360","NS")))))))
 
 #There is a lot to be done to improve the data particularly during the data entry phase.
 #See notes for each step.
@@ -221,7 +222,7 @@ departure$regionCode[is.na(departure$regionCode)] <- "Missing"
 
 #Step 2.5 - Checking resident status, note that resident status in departure is not a dependent variable.
 departure$resident <- ifelse(departure$countryCode==3609,1,2)
-#departure$residence <- [is.na(departure$residence)] <- "Missing"
+departure$resident[is.na(departure$resident)] <- "Missing"
 #!!!Comment previous line if there are no blank residence "Missing".
 #!!!Note: ASO to check residency. Tuvalu nationals should be residents. There are cases when this is not true.
 # Classifying such cases as non-resident should be carefully considered.
@@ -239,14 +240,13 @@ departure <- merge(departure, age_group, by = "age", all = TRUE)
 
 #Step 2.8 - Process duration of stay, a lot of cleaning in required to do at data entry level
 #Need to research how to use nested if statements. Use merge for now.
-durStay_Away <- read_excel("data/durStay_Group.xlsx")
-colnames(durStay_Away)[colnames(durStay_Away) == "durStayCalc"] <- "daysAway"
-colnames(durStay_Away)[colnames(durStay_Away) == "stayAwayGroup"] <- "daysAwayGroup"
-departure <- merge(departure, durStay_Away, by = "daysAway", all = TRUE) #merge files
-departure$daysAwayGroup[is.na(departure$daysAwayGroup)] <- "Missing"
-#departure <- departure[!is.na(departure$flightship), ] #drop empty rows
-#!!!Note: There are cases where dates are entered as days away. ASO to note that this variable requires
-# the number of days away. ASO to calculate this number if a date is entered in the forms.
+departure$daysAwayGroup <- ifelse(departure$daysAway <= 8, "<8",
+                        ifelse(departure$daysAway > 8 & departure$daysAway<=14, "9-14",
+                               ifelse(departure$daysAway > 14 & departure$daysAway<=30, "15-30",
+                                      ifelse(departure$daysAway > 30 & departure$daysAway<=90, "31-90",
+                                             ifelse(departure$daysAway > 90 & departure$daysAway<=180, "91-180",
+                                                    ifelse(departure$daysAway > 180 & departure$daysAway<=360, "181-360",
+                                                           ifelse(departure$daysAway > 360,">360","NS")))))))
 
 departure$resident <- ifelse(departure$resident==1,"Resident","Visitor")
 departure$sex <- ifelse(departure$sex==1,"Male","Female")
@@ -262,6 +262,11 @@ departure <- departure[!is.na(departure$flightship), ] #drop empty rows
 departure <- departure[!is.na(departure$flightship), ]
 departure$N <- 1
 dbWriteTable(mydb, "departure", departure, overwrite = TRUE)
+
+#----------------------------------------------------------------------------------------------------------------------
+#3 Matching departure and arrivals
+#----------------------------------------------------------------------------------------------------------------------
+
 
 #dbDisconnect(mydb)
 

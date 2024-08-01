@@ -29,7 +29,7 @@ wb <- createWorkbook(creator = Sys.getenv("USERNAME"))
 #Table 1: Visitors arrivals by nationality, month, and sex
 #--------------------------------------------------------------------------------------------------------------
 #Step 1 - Get countries with frequency >= 50
-arrCountry <- dbGetQuery(mydb, "SELECT countryName AS countryName, 
+arrCountry <- dbGetQuery(mydb, "SELECT countryName, 
                                         sum(N) AS Count 
                                  FROM arrivals 
                                  WHERE year > 2000
