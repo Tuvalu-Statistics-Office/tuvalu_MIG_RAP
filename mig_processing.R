@@ -7,16 +7,12 @@
 
 ##processing arrival and departure
 
-#load libraries
-library(readxl) #used to import excel files
-library(tidyverse)
-library(dplyr)
-library(RSQLite)
-library(pivottabler)
-
 #Dynamic directory path mapping
 repository <- file.path(dirname(rstudioapi::getSourceEditorContext()$path))
 setwd(repository)
+
+#Load setup file
+source("R/function/setup.R")
 
 #Import excel files for both arrivals and departures
 arrivals <- read_excel("data/arrivals.xlsx")
@@ -46,6 +42,34 @@ colnames(arrivals)[colnames(arrivals) == "PURPOSE OF VISIT"] <- "purpVisit"
 colnames(arrivals)[colnames(arrivals) == "DURATION OF STAY"] <- "durStay"
 colnames(arrivals)[colnames(arrivals) == "OTHER PURPOSE"] <- "othPurpose"
 
+#Would be advisable to rename the the columns using dplyer as per the following example 
+arrivals <- arrivals |>
+  #filter out records with no arrival dates
+  filter(!is.na(`DATE OF ARRIVAL`)) |>
+  #rename the columns
+  rename(
+    flightship = `FLIGHT/ SHIP#`,
+    transport = TRANSPORT,
+    dateArrival = `DATE OF ARRIVAL`,
+    pax = `PAX#`
+    # continue to the rest of the fields
+  ) |>
+  #drop the columns that are not needed
+  select(-`OTHER PURPOSE (DETAILS)`,
+         -`CITIZEN COUNTRY`,
+         -`REGION CODE`,
+         -`REGION NAME`
+         #Continue with the rest of the fields
+  ) |>
+  #creating new columns using the mutate function
+  mutate(
+    dateArrival = ymd(dateArrival),
+    month = month(dateArrival),
+    year = year(dateArrival)
+  )
+
+
+
 #columns after "othPurpose" will be dropped as they are columns in the data entry worksheet that are 
 #dependent on other data in data entry worksheet or from other worksheets.
 
@@ -64,6 +88,7 @@ arrivals <- arrivals[, -which(names(arrivals)=="Quarters")]
 arrivals <- arrivals[, -which(names(arrivals)=="ACTUAL DOB")]
 arrivals <- arrivals[, -which(names(arrivals)=="year")]
 arrivals <- arrivals[, -which(names(arrivals)=="Expected date of De-arture")]
+
 
 #Step 1.1 - Drop rows with missing date of arrival.
 #These records are dropped as there is not much that can be done in terms of imputation. Until CSD agrees on how to impute the dates
@@ -156,6 +181,9 @@ dbWriteTable(mydb, "arrivals", arrivals, overwrite = TRUE)
 
 #Step 2.0 - Renaming columns in departure table
 departure <- read_excel("data/departures.xlsx")
+
+#Again you can use dplyr to streamline the renaming, filtering and adding columns
+
 colnames(departure)[colnames(departure) == "FLIGHT/ SHIP#"] <- "flightship"
 colnames(departure)[colnames(departure) == "TM"] <- "transport"
 colnames(departure)[colnames(departure) == "DESTINATION"] <- "destination"
@@ -253,6 +281,15 @@ departure$sex <- ifelse(departure$sex==1,"Male","Female")
 departure$transport <- ifelse(departure$transport==1,"Air","Sea")
 
 purpTravel <- read_excel("data/purpTravel.xlsx")
+#Very small subsidiary tables can be created as datafram within R rather having external excel files
+#For example for the month you can have something like this
+month_df <- data.frame(
+  monthId = c(1,2,3,4,5,6,7,8,9,10,11,12),
+  monthDesc = c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"),
+  quarterID = c(1,1,1,2,2,2,3,3,3,4,4,4),
+  quarterDesc = c("Quarter 1","Quarter 1","Quarter 1","Quarter 2","Quarter 2","Quarter 2","Quarter 3","Quarter 3","Quarter 3", "Quarter 4", "Quarter 4", "Quarter 4")
+)
+
 departure <- merge(departure, purpTravel, by = "purpTravel", all = TRUE) #merge files
 monthtab <- read_excel("data/month.xlsx")
 departure <- merge(departure, monthtab, by = "month", all = TRUE) #merge files
