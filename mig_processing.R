@@ -68,8 +68,6 @@ arrivals <- arrivals |>
     year = year(dateArrival)
   )
 
-
-
 #columns after "othPurpose" will be dropped as they are columns in the data entry worksheet that are 
 #dependent on other data in data entry worksheet or from other worksheets.
 
@@ -137,6 +135,36 @@ arrivals$age[is.na(arrivals$age)] <- "Missing"
 
 #Step 1.7 - Get age groups
 age_group <- read_excel("data/ageGroup.xlsx")
+#You can create the age group using mutate function within R as follows
+arrivals <- arrivals |>
+  mutate(myAgeGroup = case_when(
+    AGE <= 4 ~ "0 to 4",
+    AGE <= 9 ~ "5 to 9",
+    AGE <= 14 ~ "10 to 14",
+    AGE <= 19 ~ "15 to 19",
+    AGE <= 24 ~ "20 to 24",
+    AGE <= 29 ~ "25 to 29",
+    AGE <= 34 ~ "30 to 34",
+    AGE <= 39 ~ "35 to 39",
+    AGE <= 44 ~ "40 to 44",
+    AGE <= 49 ~ "45 to 49",
+    AGE <= 54 ~ "50 to 54",
+    AGE <= 59 ~ "55 to 59",
+    AGE <= 64 ~ "60 to 64",
+    TRUE ~ "65 and over"  
+  ),
+  #Rather than having to create seperate lines of codes for these, you can also make use of the mutate function
+  gender = ifelse(SEX ==1, "Male", "Female"),
+  resid = ifelse(resident ==1, "Resident", "Visitor"),
+  transport = ifelse(transport==1, "Air", "Sea"),
+  
+  stayAwayGroup = case_when(
+    durStayCalc <= 8 ~ "<8",
+    durStayCalc >8 & durStayCalc <=14 ~ "9-14"
+    #Continue to the rest of the group
+  )
+)
+
 arrivals <- merge(arrivals, age_group, by = "age", all = TRUE)
 #!!!Note: Age group is only missing if age is missing.
 
@@ -146,12 +174,12 @@ arrivals <- merge(arrivals, age_group, by = "age", all = TRUE)
 arrivals$dateDep <- ymd(arrivals$durStay)
 arrivals$durStayCalc <- arrivals$dateDep - arrivals$dateArrival #Need to process other records
 arrivals$stayAwayGroup <- ifelse(arrivals$durStayCalc <= 8, "<8",
-                        ifelse(arrivals$durStayCalc > 8 & arrivals$durStayCalc<=14, "9-14",
-                               ifelse(arrivals$durStayCalc > 14 & arrivals$durStayCalc<=30, "15-30",
-                                      ifelse(arrivals$durStayCalc > 30 & arrivals$durStayCalc<=90, "31-90",
-                                             ifelse(arrivals$durStayCalc > 90 & arrivals$durStayCalc<=180, "91-180",
-                                                    ifelse(arrivals$durStayCalc > 180 & arrivals$durStayCalc<=360, "181-360",
-                                                           ifelse(arrivals$durStayCalc > 360,">360","NS")))))))
+                          ifelse(arrivals$durStayCalc > 8 & arrivals$durStayCalc<=14, "9-14",
+                          ifelse(arrivals$durStayCalc > 14 & arrivals$durStayCalc<=30, "15-30",
+                          ifelse(arrivals$durStayCalc > 30 & arrivals$durStayCalc<=90, "31-90",
+                          ifelse(arrivals$durStayCalc > 90 & arrivals$durStayCalc<=180, "91-180",
+                          ifelse(arrivals$durStayCalc > 180 & arrivals$durStayCalc<=360, "181-360",
+                          ifelse(arrivals$durStayCalc > 360,">360","NS")))))))
 
 #There is a lot to be done to improve the data particularly during the data entry phase.
 #See notes for each step.
