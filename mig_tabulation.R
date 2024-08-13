@@ -264,4 +264,40 @@ addWorksheet(wb, "tableD8")
 pt$writeToExcelWorksheet(wb=wb, wsName="tableD8", 
                          topRowNumber=1, leftMostColumnNumber=1, applyStyles=TRUE, mapStylesFromCSS=TRUE)
 saveWorkbook(wb, file="output/Departure Tables.xlsx", overwrite = TRUE)
+
+#--------------------------------------------------------------------------------------------------------------
+#Exporting table that matches arrival and departure dates
+#--------------------------------------------------------------------------------------------------------------
+
+tab1 <- dbGetQuery(mydb,"SELECT * FROM match")
+tab1$dateArrival <- convertToDateTime(tab1$dateArrival, origin = "1970-01-01")
+tab1$dateDeparture <- convertToDateTime(tab1$dateDeparture, origin = "1970-01-01")
+write.xlsx(tab1,"output/ArrDep_Match.xlsx", asTable = FALSE, overwrite = TRUE)
+
+#--------------------------------------------------------------------------------------------------------------
+#Exporting tables that for population estimates
+#--------------------------------------------------------------------------------------------------------------
+#Note: ASO to change the year and the range for month
+tab2 <- dbGetQuery(mydb,"SELECT year, month, age, sex, N FROM arrivals WHERE resident = 'Resident' AND year = 2024 AND month>=1 AND month<=3")
+pt <- PivotTable$new()
+pt$addData(tab2)
+pt$addColumnDataGroups("sex")
+pt$addRowDataGroups("age")
+pt$defineCalculation(calculationName="Resident_Arrivals", summariseExpression="format(round(sum(N), 0), big.mark = ',')")
+pt$renderPivot()
+addWorksheet(wb, "Res_Arr")
+pt$writeToExcelWorksheet(wb=wb, wsName="Res_Arr", 
+                         topRowNumber=1, leftMostColumnNumber=1, applyStyles=TRUE, mapStylesFromCSS=TRUE)
+
+tab3 <- dbGetQuery(mydb,"SELECT year, month, age, sex, N FROM departure WHERE resident = 'Resident' AND year>=2024 AND month >=1 AND month<=3")
+pt <- PivotTable$new()
+pt$addData(tab3)
+pt$addColumnDataGroups("sex")
+pt$addRowDataGroups("age")
+pt$defineCalculation(calculationName="Resident_Departures", summariseExpression="format(round(sum(N), 0), big.mark = ',')")
+pt$renderPivot()
+addWorksheet(wb, "Res_Dep")
+pt$writeToExcelWorksheet(wb=wb, wsName="Res_Dep", 
+                         topRowNumber=1, leftMostColumnNumber=1, applyStyles=TRUE, mapStylesFromCSS=TRUE)
+saveWorkbook(wb, file="output/pop_est_mig.xlsx", overwrite = TRUE)
 dbDisconnect(mydb)
