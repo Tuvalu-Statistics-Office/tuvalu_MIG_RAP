@@ -129,6 +129,7 @@ arrivals$resident <- ifelse(arrivals$countryCode==3609,1,2)
 #Step 1.6 - Calculate age
 arrivals$dobYear <- year(arrivals$dob)
 arrivals$age <- arrivals$year - arrivals$dobYear
+arrivals$age <- ifelse(arrivals$age > 99, "ERROR",arrivals$age)
 arrivals$age[is.na(arrivals$age)] <- "Missing"
 #!!!Note: Age is only missing if either date of arrival or date of birth is missing. In all cases, these variables
 # should not be missing.
@@ -286,6 +287,7 @@ departure$resident[is.na(departure$resident)] <- "Missing"
 #Step 2.6 - Calculate age
 departure$dobYear <- year(departure$dob)
 departure$age <- departure$year - departure$dobYear
+departure$age <- ifelse(departure$age > 99, "ERROR",departure$age)
 departure$age[is.na(departure$age)] <- "Missing"
 #!!!Note: Age is only missing if either date of arrival or date of birth is missing. In all cases, these variables
 # should not be missing.
@@ -331,8 +333,20 @@ dbWriteTable(mydb, "departure", departure, overwrite = TRUE)
 #----------------------------------------------------------------------------------------------------------------------
 #3 Matching departure and arrivals
 #----------------------------------------------------------------------------------------------------------------------
+arrDates <- dbGetQuery(mydb, "SELECT dateArrival FROM arrivals AS date WHERE year = curYearA")
+arrDates$dateA <- convertToDateTime(arrDates$date, origin = "1970-01-01")
+arrDates$yearA <- year(arrDates$dateA)
+arrDates$monthA <- month(arrDates$dateA)
+dbWriteTable(mydb, "arrDates", arrDates, overwrite = TRUE)
+depDates <- dbGetQuery(mydb, "SELECT dateDeparture FROM departure AS date WHERE year = curYearD")
+depDates$dateD <- convertToDateTime(depDates$date, origin = "1970-01-01")
+depDates$yearD <- year(depDates$dateD)
+depDates$monthD <- month(depDates$dateD)
+dbWriteTable(mydb, "depDates", depDates, overwrite = TRUE)
 
+match <- dbGetQuery(mydb,"SELECT * FROM arrDates FULL OUTER JOIN depDates ON arrDates.dateA = depDates.dateD GROUP BY arrDates.dateArrival, depDates.dateDeparture")
+dbWriteTable(mydb, "match", match, overwrite = TRUE)
 
-#dbDisconnect(mydb)
+dbDisconnect(mydb)
 
 #source("mig_tabulation.R")
