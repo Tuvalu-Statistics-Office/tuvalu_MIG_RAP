@@ -24,41 +24,45 @@ mydb <- dbConnect(RSQLite::SQLite(), "data/migration.db")
 #1 Processing arrival data
 #----------------------------------------------------------------------------------------------------------------------
 
-#Step 1.0 - Renaming column names in arrival table
-colnames(arrivals)[colnames(arrivals) == "FLIGHT/ SHIP#"] <- "flightship"
-colnames(arrivals)[colnames(arrivals) == "TRANSPORT"] <- "transport"
-colnames(arrivals)[colnames(arrivals) == "DATE OF ARRIVAL"] <- "dateArrival"
-colnames(arrivals)[colnames(arrivals) == "PAX#"] <- "pax"
-colnames(arrivals)[colnames(arrivals) == "SURNAME"] <- "lname"
-colnames(arrivals)[colnames(arrivals) == "FIRST NAME"] <- "fname"
-colnames(arrivals)[colnames(arrivals) == "COUNTRY OF BIRTH"] <- "birthCountry"
-colnames(arrivals)[colnames(arrivals) == "DATE OF BIRTH"] <- "dob"
-colnames(arrivals)[colnames(arrivals) == "OCCUPATION"] <- "occupation"
-colnames(arrivals)[colnames(arrivals) == "COUNTRY OF CITIZENSHIP"] <- "countryCode"
-colnames(arrivals)[colnames(arrivals) == "PERMANENT ADDRESS"] <- "permAddress"
-colnames(arrivals)[colnames(arrivals) == "SEX"] <- "sex"
-colnames(arrivals)[colnames(arrivals) == "PASSPORT#"] <- "passport"
-colnames(arrivals)[colnames(arrivals) == "PURPOSE OF VISIT"] <- "purpVisit"
-colnames(arrivals)[colnames(arrivals) == "DURATION OF STAY"] <- "durStay"
-colnames(arrivals)[colnames(arrivals) == "OTHER PURPOSE"] <- "othPurpose"
-
-#Would be advisable to rename the the columns using dplyer as per the following example 
+#Step 1.0 - Renaming ad deleting columns and rows
 arrivals <- arrivals |>
   #filter out records with no arrival dates
   filter(!is.na(`DATE OF ARRIVAL`)) |>
   #rename the columns
   rename(
     flightship = `FLIGHT/ SHIP#`,
-    transport = TRANSPORT,
+    transport = `TRANSPORT`,
     dateArrival = `DATE OF ARRIVAL`,
-    pax = `PAX#`
+    pax = `PAX#`,
+    lname = `SURNAME`,
+    fname = `FIRST NAME`,
+    birthCountry = `COUNTRY OF BIRTH`,
+    dob = `DATE OF BIRTH`,
+    occupation = `OCCUPATION`,
+    countryCode = `COUNTRY OF CITIZENSHIP`,
+    permAddress = `PERMANENT ADDRESS`,
+    sex = `SEX`,
+    passport = `PASSPORT#`,
+    purpVisit = `PURPOSE OF VISIT`,
+    durStay = `DURATION OF STAY`,
+    othPurpose = `OTHER PURPOSE (DETAILS)`
     # continue to the rest of the fields
   ) |>
   #drop the columns that are not needed
-  select(-`OTHER PURPOSE (DETAILS)`,
-         -`CITIZEN COUNTRY`,
+  select(-`CITIZEN COUNTRY`,
          -`REGION CODE`,
-         -`REGION NAME`
+         -`REGION NAME`,
+         -`RESIDENT STATUS`,
+         -`AGE`,
+         -`AGE GROUP`,
+         -`REGION CODE`,
+         -`STAY DURATION GROUP`,
+         -`Month`,
+         -`MONTH/YEAR`,
+         -`Quarters`,
+         -`ACTUAL DOB`,
+         -`year`,
+         -`Expected date of De-arture`
          #Continue with the rest of the fields
   ) |>
   #creating new columns using the mutate function
@@ -67,49 +71,14 @@ arrivals <- arrivals |>
     month = month(dateArrival),
     year = year(dateArrival)
   )
-
-#columns after "othPurpose" will be dropped as they are columns in the data entry worksheet that are 
-#dependent on other data in data entry worksheet or from other worksheets.
-
-arrivals <- arrivals[, -which(names(arrivals)=="OTHER PURPOSE (DETAILS)")]
-arrivals <- arrivals[, -which(names(arrivals)=="CITIZEN COUNTRY")]
-arrivals <- arrivals[, -which(names(arrivals)=="REGION CODE")]
-arrivals <- arrivals[, -which(names(arrivals)=="REGION NAME")]
-arrivals <- arrivals[, -which(names(arrivals)=="RESIDENT STATUS")]
-arrivals <- arrivals[, -which(names(arrivals)=="AGE")]
-arrivals <- arrivals[, -which(names(arrivals)=="AGE GROUP","REGION CODE")]
-#arrivals <- arrivals[, -which(names(arrivals)=="REGION CODE")]
-arrivals <- arrivals[, -which(names(arrivals)=="STAY DURATION GROUP")]
-arrivals <- arrivals[, -which(names(arrivals)=="Month")]
-arrivals <- arrivals[, -which(names(arrivals)=="MONTH/YEAR")]
-arrivals <- arrivals[, -which(names(arrivals)=="Quarters")]
-arrivals <- arrivals[, -which(names(arrivals)=="ACTUAL DOB")]
-arrivals <- arrivals[, -which(names(arrivals)=="year")]
-arrivals <- arrivals[, -which(names(arrivals)=="Expected date of De-arture")]
-
-
-#Step 1.1 - Drop rows with missing date of arrival.
-#These records are dropped as there is not much that can be done in terms of imputation. Until CSD agrees on how to impute the dates
-#or receives assistance on missing dates, not much can be done.
-#!!!Note the number of obs before dropping = 10,296
-arrivals <- arrivals[!is.na(arrivals$dateArrival), ]
-#!!!Note the number of obs after dropping = 9,882
-#!!!Note the difference = 414
-#The number of obs before and after dropping will be different for different data sets
-
-#Step 1.2 - Formatting the date of arrival and create column month and year
-arrivals$dateArrival = ymd(arrivals$dateArrival)
-arrivals$month = month(arrivals$dateArrival)
-arrivals$year = year(arrivals$dateArrival)
 #!!!Note: ASO should always check the formats of the dates.
 
-#Step 1.3 - Check for years that may be incorrect. Drop record if it cannot be corrected.
+#Step 1.1 - Check for years that may be incorrect. Drop record if it cannot be corrected.
 curYearA <- max(arrivals$year)
 arrivals$curYearA <- curYearA
 arrivals <- arrivals[arrivals$year > curYearA-10, ]
-#!!!Note: Dropping is a result of incorrect dates. ASO should check the dates.
 
-#Step 1.4 - Get country description, region code, and region description
+#Step 1.2 - Get country description, region code, and region description
 country_region <- read_excel("data/country_region.xlsx") #load country and region file
 arrivals <- merge(arrivals, country_region, by = "countryCode", all = TRUE) #merge files
 arrivals <- arrivals[!is.na(arrivals$flightship), ] #drop empty rows
@@ -117,89 +86,89 @@ arrivals$countryCode[is.na(arrivals$countryCode)] <- "Missing"
 arrivals$countryName[is.na(arrivals$countryName)] <- "Missing"
 arrivals$regionCode[is.na(arrivals$regionCode)] <- "Missing"
 arrivals$regionCode[is.na(arrivals$regionCode)] <- "Missing"
-#!!!Note: Missing country codes will be assigned "Missing". ASO to check that country matches with Passport
-#particularly people with Tuvaluan passports should be Tuvaluan nationals.
 
-#Step 1.5 - Generate resident status
+#Step 1.3 - Generate resident status
 arrivals$resident <- ifelse(arrivals$purpVisit==1,1,2)
 arrivals$resident <- ifelse(arrivals$countryCode==3609,1,2)
 #!!!Note: ASO to check residency. Tuvalu nationals should be residents. There are cases when this is not true.
 # Classifying such cases as non-resident should be carefully considered.
 
-#Step 1.6 - Calculate age
+#Step 1.4 - Calculate age
 arrivals$dobYear <- year(arrivals$dob)
 arrivals$age <- arrivals$year - arrivals$dobYear
 arrivals$age <- ifelse(arrivals$age > 99, "ERROR",arrivals$age)
 arrivals$age[is.na(arrivals$age)] <- "Missing"
-#!!!Note: Age is only missing if either date of arrival or date of birth is missing. In all cases, these variables
-# should not be missing.
 
-#Step 1.7 - Get age groups
-age_group <- read_excel("data/ageGroup.xlsx")
-#You can create the age group using mutate function within R as follows
-arrivals <- arrivals |>
-  mutate(myAgeGroup = case_when(
-    AGE <= 4 ~ "0 to 4",
-    AGE <= 9 ~ "5 to 9",
-    AGE <= 14 ~ "10 to 14",
-    AGE <= 19 ~ "15 to 19",
-    AGE <= 24 ~ "20 to 24",
-    AGE <= 29 ~ "25 to 29",
-    AGE <= 34 ~ "30 to 34",
-    AGE <= 39 ~ "35 to 39",
-    AGE <= 44 ~ "40 to 44",
-    AGE <= 49 ~ "45 to 49",
-    AGE <= 54 ~ "50 to 54",
-    AGE <= 59 ~ "55 to 59",
-    AGE <= 64 ~ "60 to 64",
-    TRUE ~ "65 and over"  
-  ),
-  #Rather than having to create seperate lines of codes for these, you can also make use of the mutate function
-  gender = ifelse(SEX ==1, "Male", "Female"),
-  resid = ifelse(resident ==1, "Resident", "Visitor"),
-  transport = ifelse(transport==1, "Air", "Sea"),
-  
-  stayAwayGroup = case_when(
-    durStayCalc <= 8 ~ "<8",
-    durStayCalc >8 & durStayCalc <=14 ~ "9-14"
-    #Continue to the rest of the group
-  )
-)
-
-arrivals <- merge(arrivals, age_group, by = "age", all = TRUE)
-#!!!Note: Age group is only missing if age is missing.
-
-#Step 1.8 - Process duration of stay, a lot of cleaning in required to do at data entry level
-#Need to research how to use nested if statements. Use merge for now.
-#Calculate duration of stay
+#Step 1.5 - Get age groups, sex, duration away, resident status, transport, 
 arrivals$dateDep <- ymd(arrivals$durStay)
 arrivals$durStayCalc <- arrivals$dateDep - arrivals$dateArrival #Need to process other records
-arrivals$stayAwayGroup <- ifelse(arrivals$durStayCalc <= 8, "<8",
-                          ifelse(arrivals$durStayCalc > 8 & arrivals$durStayCalc<=14, "9-14",
-                          ifelse(arrivals$durStayCalc > 14 & arrivals$durStayCalc<=30, "15-30",
-                          ifelse(arrivals$durStayCalc > 30 & arrivals$durStayCalc<=90, "31-90",
-                          ifelse(arrivals$durStayCalc > 90 & arrivals$durStayCalc<=180, "91-180",
-                          ifelse(arrivals$durStayCalc > 180 & arrivals$durStayCalc<=360, "181-360",
-                          ifelse(arrivals$durStayCalc > 360,">360","NS")))))))
-
-#There is a lot to be done to improve the data particularly during the data entry phase.
-#See notes for each step.
-
-#Change values for tables
-#Residence
-arrivals$resident <- ifelse(arrivals$resident==1,"Resident","Visitor")
-#Sex
-arrivals$sex <- ifelse(arrivals$sex==1,"Male","Female")
-#Months
-monthtab <- read_excel("data/month.xlsx")
-arrivals <- merge(arrivals, monthtab, by = "month", all = TRUE) #merge files
-arrivals <- arrivals[!is.na(arrivals$flightship), ] #drop empty rows
-#TM
-arrivals$transport <- ifelse(arrivals$transport==1,"Air","Sea")
-#Purpose of visit
-purpVisit <- read_excel("data/purpVisit.xlsx")
-arrivals <- merge(arrivals, purpVisit, by = "purpVisit", all = TRUE) #merge files
-arrivals <- arrivals[!is.na(arrivals$flightship), ] #drop empty rows
+arrivals <- arrivals |>
+  mutate(myAgeGroup = case_when(
+    age <= 10 ~ "0 to 10",
+    age <= 20 ~ "11 to 20",
+    age <= 30 ~ "21 to 30",
+    age <= 40 ~ "31 to 40",
+    age <= 50 ~ "41 to 50",
+    age <= 60 ~ "51 to 60",
+    age <= 70 ~ "61 to 70",
+    TRUE ~ "71+"  
+  ),
+  #Changing labels for sex, resident status, and transport mode
+  gender = ifelse(sex ==1, "Male", "Female"),
+  resid = ifelse(resident ==1, "Resident", "Visitor"),
+  transport = ifelse(transport==1, "Air", "Sea"),
+  #Get duration of stay group
+  durStayGroup = case_when(
+    durStayCalc <= 8 ~ "<8",
+    durStayCalc >8 & durStayCalc <=14 ~ "9-14",
+    durStayCalc >14 & durStayCalc <=30 ~ "15-30",
+    durStayCalc >30 & durStayCalc <=90 ~ "31-90",
+    durStayCalc >90 & durStayCalc <=180 ~ "90-180",
+    durStayCalc >180 & durStayCalc <=360 ~ "181-360",
+    TRUE ~ "360+"
+  ),
+  monthDesc = case_when(
+    month == 1 ~ "Jan",
+    month == 2 ~ "Feb",
+    month == 3 ~ "Mar",
+    month == 4 ~ "Apr",
+    month == 5 ~ "May",
+    month == 6 ~ "Jun",
+    month == 7 ~ "Jul",
+    month == 8 ~ "Aug",
+    month == 9 ~ "Sep",
+    month == 10 ~ "Oct",
+    month == 11 ~ "Nov",
+    month == 12 ~ "Dec"
+  ),
+  purpVisitDesc = case_when(
+    purpVisit == 1 ~ "Returning resident",
+    purpVisit == 2 ~ "Holiday",
+    purpVisit == 3 ~ "Transit",
+    purpVisit == 4 ~ "Research/ Study",
+    purpVisit == 5 ~ "Business/ Commerce",
+    purpVisit == 6 ~ "Government Conference",
+    purpVisit == 7 ~ "Government Business",
+    purpVisit == 8 ~ "Religious",
+    purpVisit == 9 ~ "Other NGO",
+    purpVisit == 20 ~ "Other Purpose"
+    ),
+  quarter = case_when(
+    month >=1 & month <=3 ~ 1,
+    month >=4 & month <=6 ~ 2,
+    month >=7 & month <=9 ~ 3,
+    month >=10 & month <=12 ~ 4
+  ),
+  durStayCode = case_when(
+    durStayCalc <= 8 ~ 1,
+    durStayCalc >8 & durStayCalc <=14 ~ 2,
+    durStayCalc >14 & durStayCalc <=30 ~ 3,
+    durStayCalc >30 & durStayCalc <=90 ~ 4,
+    durStayCalc >90 & durStayCalc <=180 ~ 5,
+    durStayCalc >180 & durStayCalc <=360 ~ 6,
+    TRUE ~ 7
+  )
+)
 #Step 1.9 - Write arrivals to db
 arrivals$N <- 1
 dbWriteTable(mydb, "arrivals", arrivals, overwrite = TRUE)
@@ -207,59 +176,51 @@ dbWriteTable(mydb, "arrivals", arrivals, overwrite = TRUE)
 #----------------------------------------------------------------------------------------------------------------------
 #2 Processing departure
 #----------------------------------------------------------------------------------------------------------------------
-
-#Step 2.0 - Renaming columns in departure table
 departure <- read_excel("data/departures.xlsx")
 
-#Again you can use dplyr to streamline the renaming, filtering and adding columns
+#Step 2.0 - Renaming columns in departure table
 
-colnames(departure)[colnames(departure) == "FLIGHT/ SHIP#"] <- "flightship"
-colnames(departure)[colnames(departure) == "TM"] <- "transport"
-colnames(departure)[colnames(departure) == "DESTINATION"] <- "destination"
-colnames(departure)[colnames(departure) == "DATE OF DEPARTURE"] <- "dateDeparture"
-colnames(departure)[colnames(departure) == "Pax#"] <- "pax"
-colnames(departure)[colnames(departure) == "SURNAME"] <- "lname"
-colnames(departure)[colnames(departure) == "FIRST NAME"] <- "fname"
-colnames(departure)[colnames(departure) == "PASSPORT#"] <- "passport"
-colnames(departure)[colnames(departure) == "NATIONALITY"] <- "countryCode"
-colnames(departure)[colnames(departure) == "DATE OF BIRTH"] <- "dob"
-colnames(departure)[colnames(departure) == "SEX"] <- "sex"
-colnames(departure)[colnames(departure) == "RESID_ ENCE"] <- "resident"
-colnames(departure)[colnames(departure) == "POT/ POV"] <- "purpTravel"
-colnames(departure)[colnames(departure) == "Details of Other Purpose"] <- "otherPurpTravel"
-colnames(departure)[colnames(departure) == "RESIDENT (DAYS AWAY)"] <- "daysAway"
-colnames(departure)[colnames(departure) == "FLIGHT/SHIP#"] <- "flight_ship"
-colnames(departure)[colnames(departure) == "NON_RESIDENT (DATE OF ARRIVAL)"] <- "dateArrival"
-
-#columns after "dateDeparture" will be dropped as they are columns in the data entry worksheet that are 
-#dependent on other variables in data entry worksheet or from other worksheets.
-departure <- departure[, -which(names(departure)=="COUNTRY")]
-departure <- departure[, -which(names(departure)=="Region Code")]
-departure <- departure[, -which(names(departure)=="Region Name")]
-departure <- departure[, -which(names(departure)=="AGE")]
-departure <- departure[, -which(names(departure)=="AGE GROUP")]
-departure <- departure[, -which(names(departure)=="Days Away Groups")]
-#departure <- departure[, -which(names(departure)=="NON_RESIDENT (DATE OF ARRIVAL)")]
-departure <- departure[, -which(names(departure)=="MONTH")]
-departure <- departure[, -which(names(departure)=="MONTH/ YEAR")]
-departure <- departure[, -which(names(departure)=="year")]
-departure <- departure[, -which(names(departure)=="QTR")]
-
-#Step 2.1 - Drop rows with missing date of departure.
-#These records are dropped as there is not much that can be done in terms of imputation. Until CSD agrees on how to impute the dates
-#or receives assistance on missing dates, not much can be done.
-#!!!Note the number of obs before dropping = 12,391
-departure <- departure[!is.na(departure$dateDeparture), ]
-#uncomment the line above to drop entries with missing depature dates
-#!!!Note the number of obs after dropping = 12,291
-#!!!Note the difference = 100
-#The number of obs before and after dropping will be vary for different data sets
-
-#Step 2.2 - Formatting the date of departure and create column month and year
-departure$dateDeparture = ymd(departure$dateDeparture)
-departure$month = month(departure$dateDeparture)
-departure$year = year(departure$dateDeparture)
-#!!!Note: ASO should always check the formats of the dates.
+departure <- departure |>
+  #filter out records with no departure dates
+  filter(!is.na(`DATE OF DEPARTURE`)) |>
+  #rename the columns
+  rename(
+    flightship = `FLIGHT/ SHIP#`,
+    transport = `TM`,
+    destination = `DESTINATION`,
+    dateDeparture = `DATE OF DEPARTURE`,
+    pax = `Pax#`,
+    lname = `SURNAME`,
+    fname = `FIRST NAME`,
+    passport = `PASSPORT#`,
+    countryCode = `NATIONALITY`,
+    dob = `DATE OF BIRTH`,
+    sex = `SEX`,
+    resident = `RESID_ ENCE`,
+    purpTravel = `POT/ POV`,
+    otherPurpTravel = `Details of Other Purpose`,
+    daysAway = `RESIDENT (DAYS AWAY)`,
+    dateArrival = `NON_RESIDENT (DATE OF ARRIVAL)`
+  ) |>
+  #drop the columns that are not needed
+  select(
+    -`COUNTRY`,
+    -`Region Code`,
+    -`Region Code`,
+    -`Region Name`,
+    -`AGE`,
+    -`AGE GROUP`,
+    -`Days Away Groups`,
+    -`MONTH`,
+    -`MONTH/ YEAR`,
+    -`year`,
+    -`QTR`
+  )|>
+  mutate(
+    dateDeparture = ymd(dateDeparture),
+    month = month(dateDeparture),
+    year = year(dateDeparture)
+  )
 
 #Step 2.3 - Check for years that may be incorrect. Drop record if it cannot be corrected.
 curYearD <- max(departure$year)
@@ -274,8 +235,6 @@ departure$countryCode[is.na(departure$countryCode)] <- "Missing"
 departure$countryName[is.na(departure$countryName)] <- "Missing"
 departure$regionCode[is.na(departure$regionCode)] <- "Missing"
 departure$regionCode[is.na(departure$regionCode)] <- "Missing"
-#!!!Note: Missing country codes will be assigned "Missing". ASO to check that country matches with Passport
-#particularly people with Tuvaluan passports should be Tuvaluan nationals.
 
 #Step 2.5 - Checking resident status, note that resident status in departure is not a dependent variable.
 departure$resident <- ifelse(departure$countryCode==3609,1,2)
@@ -287,44 +246,82 @@ departure$resident[is.na(departure$resident)] <- "Missing"
 #Step 2.6 - Calculate age
 departure$dobYear <- year(departure$dob)
 departure$age <- departure$year - departure$dobYear
-departure$age <- ifelse(departure$age > 99, "ERROR",departure$age)
-departure$age[is.na(departure$age)] <- "Missing"
 #!!!Note: Age is only missing if either date of arrival or date of birth is missing. In all cases, these variables
 # should not be missing.
 
-#Step 2.7 - Get age groups
-departure <- merge(departure, age_group, by = "age", all = TRUE)
-#!!!Note: Age group is only missing if age is missing.
-
-#Step 2.8 - Process duration of stay, a lot of cleaning in required to do at data entry level
-#Need to research how to use nested if statements. Use merge for now.
-departure$daysAwayGroup <- ifelse(departure$daysAway <= 8, "<8",
-                        ifelse(departure$daysAway > 8 & departure$daysAway<=14, "9-14",
-                               ifelse(departure$daysAway > 14 & departure$daysAway<=30, "15-30",
-                                      ifelse(departure$daysAway > 30 & departure$daysAway<=90, "31-90",
-                                             ifelse(departure$daysAway > 90 & departure$daysAway<=180, "91-180",
-                                                    ifelse(departure$daysAway > 180 & departure$daysAway<=360, "181-360",
-                                                           ifelse(departure$daysAway > 360,">360","NS")))))))
-
-departure$resident <- ifelse(departure$resident==1,"Resident","Visitor")
-departure$sex <- ifelse(departure$sex==1,"Male","Female")
-departure$transport <- ifelse(departure$transport==1,"Air","Sea")
-
-purpTravel <- read_excel("data/purpTravel.xlsx")
-#Very small subsidiary tables can be created as datafram within R rather having external excel files
-#For example for the month you can have something like this
-month_df <- data.frame(
-  monthId = c(1,2,3,4,5,6,7,8,9,10,11,12),
-  monthDesc = c("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"),
-  quarterID = c(1,1,1,2,2,2,3,3,3,4,4,4),
-  quarterDesc = c("Quarter 1","Quarter 1","Quarter 1","Quarter 2","Quarter 2","Quarter 2","Quarter 3","Quarter 3","Quarter 3", "Quarter 4", "Quarter 4", "Quarter 4")
+#Step 1.5 - Get age groups, sex, duration away, resident status, transport, 
+departure <- departure |>
+  mutate(myAgeGroup = case_when(
+    age <= 10 ~ "0 to 10",
+    age <= 20 ~ "11 to 20",
+    age <= 30 ~ "21 to 30",
+    age <= 40 ~ "31 to 40",
+    age <= 50 ~ "41 to 50",
+    age <= 60 ~ "51 to 60",
+    age <= 70 ~ "61 to 70",
+    TRUE ~ "71+"   
+  ),
+  #Changing labels for sex, resident status, and transport mode
+  gender = ifelse(sex ==1, "Male", "Female"),
+  resid = ifelse(resident ==1, "Resident", "Visitor"),
+  transport = ifelse(transport==1, "Air", "Sea"),
+  #Get duration of stay group
+  stayAwayGroup = case_when(
+    daysAway <= 8 ~ "<8",
+    daysAway >8 & daysAway <=14 ~ "9-14",
+    daysAway >14 & daysAway <=30 ~ "15-30",
+    daysAway >30 & daysAway <=90 ~ "31-90",
+    daysAway >90 & daysAway <=180 ~ "90-180",
+    daysAway >180 & daysAway <=360 ~ "181-360",
+    TRUE ~ "360+"
+  ),
+  monthDesc = case_when(
+    month == 1 ~ "Jan",
+    month == 2 ~ "Feb",
+    month == 3 ~ "Mar",
+    month == 4 ~ "Apr",
+    month == 5 ~ "May",
+    month == 6 ~ "Jun",
+    month == 7 ~ "Jul",
+    month == 8 ~ "Aug",
+    month == 9 ~ "Sep",
+    month == 10 ~ "Oct",
+    month == 11 ~ "Nov",
+    month == 12 ~ "Dec"
+  ),
+  purpTravelDesc = case_when(
+    purpTravel == 1 ~ "Tourism",
+    purpTravel == 2 ~ "Family/ Social",
+    purpTravel == 3 ~ "Commerce",
+    purpTravel == 4 ~ "Government",
+    purpTravel == 5 ~ "Education",
+    purpTravel == 6 ~ "Migrate",
+    purpTravel == 7 ~ "Medical",
+    purpTravel == 8 ~ "Seaman",
+    purpTravel == 9 ~ "Research/ Study",
+    purpTravel == 10 ~ "Work Scheme",
+    purpTravel == 11 ~ "Transit",
+    purpTravel == 12 ~ "NGO Business",
+    purpTravel == 20 ~ "Other Purpose"
+  ),
+  quarter = case_when(
+    month >=1 & month <=3 ~ 1,
+    month >=4 & month <=6 ~ 2,
+    month >=7 & month <=9 ~ 3,
+    month >=10 & month <=12 ~ 4
+  ),
+  daysAwayCode = case_when(
+    daysAway <= 8 ~ 1,
+    daysAway >8 & daysAway <=14 ~ 2,
+    daysAway >14 & daysAway <=30 ~ 3,
+    daysAway >30 & daysAway <=90 ~ 4,
+    daysAway >90 & daysAway <=180 ~ 5,
+    daysAway >180 & daysAway <=360 ~ 6,
+    TRUE ~ 7
+  )
 )
-
-departure <- merge(departure, purpTravel, by = "purpTravel", all = TRUE) #merge files
-monthtab <- read_excel("data/month.xlsx")
-departure <- merge(departure, monthtab, by = "month", all = TRUE) #merge files
-departure <- departure[!is.na(departure$flightship), ] #drop empty rows
-
+departure$myAgeGroup <- ifelse(departure$age > 99, "ERROR",departure$myAgeGroup)
+departure$myAgeGroup[is.na(departure$age)] <- "Missing"
 #Step 2.9 - Write departure to db
 departure <- departure[!is.na(departure$flightship), ]
 departure$N <- 1
