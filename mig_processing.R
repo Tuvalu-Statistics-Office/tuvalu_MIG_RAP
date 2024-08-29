@@ -75,6 +75,7 @@ arrivals <- arrivals |>
 curYearA <- max(arrivals$year)
 arrivals$curYearA <- curYearA
 arrivals <- arrivals[arrivals$year > curYearA-10, ]
+arrivals$yearMonth <- paste0(arrivals$year,"-",arrivals$month)
 
 #Step 1.2 - Get country description, region code, and region description
 country_region <- read_excel("data/country_region.xlsx") #load country and region file
@@ -83,7 +84,7 @@ arrivals <- arrivals[!is.na(arrivals$flightship), ] #drop empty rows
 arrivals$countryCode[is.na(arrivals$countryCode)] <- "Missing"
 arrivals$countryName[is.na(arrivals$countryName)] <- "Missing"
 arrivals$regionCode[is.na(arrivals$regionCode)] <- "Missing"
-arrivals$regionCode[is.na(arrivals$regionCode)] <- "Missing"
+arrivals$regionName[is.na(arrivals$regionName)] <- "Missing"
 
 #Step 1.3 - Generate resident status
 arrivals$resident <- ifelse(arrivals$purpVisit==1,1,2)
@@ -94,21 +95,58 @@ arrivals$resident <- ifelse(arrivals$countryCode==3609,1,2)
 #Step 1.4 - Calculate age
 arrivals$dobYear <- year(arrivals$dob)
 arrivals$age <- arrivals$year - arrivals$dobYear
-arrivals$age <- ifelse(arrivals$age > 99, "ERROR",arrivals$age)
-arrivals$age[is.na(arrivals$age)] <- "Missing"
+
+#imputing missing age
+#Mean age by year and month
+arrivalsMeanAgeYM <- arrivals
+arrivalsMeanAgeYM <- arrivalsMeanAgeYM[!is.na(arrivalsMeanAgeYM$age), ]
+arrivalsMeanAgeYM <- arrivalsMeanAgeYM%>%
+  group_by(yearMonth)%>%
+  summarise(meanAgeYM = round(mean(age),0))
+arrivals <- merge(arrivals, arrivalsMeanAgeYM, by = "yearMonth", All = TRUE)
+
+#Mean age by date
+arrivalsMeanAgeDate <- arrivals
+arrivalsMeanAgeDate <- arrivalsMeanAgeDate[!is.na(arrivalsMeanAgeDate$age), ]
+arrivalsMeanAgeDate <- arrivalsMeanAgeDate%>%
+  group_by(dateArrival)%>%
+  summarise(meanAgeDate = round(mean(age),0))
+arrivals <- merge(arrivals, arrivalsMeanAgeDate, by = "dateArrival", All = TRUE)
+
+#Mean age by year
+arrivalsMeanAgeY <- arrivals
+arrivalsMeanAgeY <- arrivalsMeanAgeY[!is.na(arrivalsMeanAgeY$age), ]
+arrivalsMeanAgeY <- arrivalsMeanAgeY%>%
+  group_by(year)%>%
+  summarise(meanAgeY = round(mean(age),0))
+arrivals <- merge(arrivals, arrivalsMeanAgeY, by = "year", All = TRUE)
+
+arrivals$corrAge <- ifelse(is.na(arrivals$age), arrivals$meanAgeDate, arrivals$age)
+arrivals$corrAge <- ifelse(is.na(arrivals$corrAge), arrivals$meanAgeYM, arrivals$corrAge)
+arrivals$corrAge <- ifelse(is.na(arrivals$corrAge), arrivals$meanAgeY, arrivals$corrAge)
+arrivals$corrAge <- ifelse(arrivals$corrAge <0 | arrivals$corrAge>99, arrivals$meanAgeDate, arrivals$corrAge)
+arrivals$corrAge <- ifelse(arrivals$corrAge <0 | arrivals$corrAge>99, arrivals$meanAgeYM, arrivals$corrAge)
+arrivals$corrAge <- ifelse(arrivals$corrAge <0 | arrivals$corrAge>99, arrivals$meanAgeY, arrivals$corrAge)
+
+#Do final check to ensure there are no missing or erroneous corrected ages
+arrivals$corrAgeChk <- ifelse(arrivals$corrAge > 99 | arrivals$corrAge < 0, "Err","Ok")
+arrivals$corrAgeChk[is.na(arrivals$corrAge)] <- "Mis"
 
 #Step 1.5 - Get age groups, sex, duration away, resident status, transport, 
 arrivals$dateDep <- ymd(arrivals$durStay)
-arrivals$durStayCalc <- arrivals$dateDep - arrivals$dateArrival #Need to process other records
+arrivals$durStayCalc <- arrivals$dateDep - arrivals$dateArrival
+
+arrivals$purpVisit <- ifelse(arrivals$purpVisit == 10,20,arrivals$purpVisit)
+
 arrivals <- arrivals |>
   mutate(myAgeGroup = case_when(
-    age <= 10 ~ "0 to 10",
-    age <= 20 ~ "11 to 20",
-    age <= 30 ~ "21 to 30",
-    age <= 40 ~ "31 to 40",
-    age <= 50 ~ "41 to 50",
-    age <= 60 ~ "51 to 60",
-    age <= 70 ~ "61 to 70",
+    corrAge <= 10 ~ "0 to 10",
+    corrAge <= 20 ~ "11 to 20",
+    corrAge <= 30 ~ "21 to 30",
+    corrAge <= 40 ~ "31 to 40",
+    corrAge <= 50 ~ "41 to 50",
+    corrAge <= 60 ~ "51 to 60",
+    corrAge <= 70 ~ "61 to 70",
     TRUE ~ "71+"  
   ),
   #Changing labels for sex, resident status, and transport mode
@@ -167,6 +205,16 @@ arrivals <- arrivals |>
     TRUE ~ 7
   )
 )
+arrivals$myAgeGroup <- ifelse(arrivals$corrAgeChk == "Err","Error",arrivals$myAgeGroup)
+arrivals$myAgeGroup <- ifelse(arrivals$corrAgeChk == "Mis","Mis",arrivals$myAgeGroup)
+
+#Checking duration of stay calculation and duration of stay group
+arrivals$durStayCalc[is.na(arrivals$durStayCalc)] <- 8888
+arrivals$durStayCalc <- ifelse(arrivals$durStayCalc <= 0,9999, arrivals$durStayCalc)
+arrivals$durStayGroup <- ifelse(arrivals$durStayCalc == 8888, "Missing", arrivals$durStayGroup)
+arrivals$durStayGroup <- ifelse(arrivals$durStayCalc == 9999, "Error", arrivals$durStayGroup)
+arrivals$durStayCode <- ifelse(arrivals$durStayCalc == 8888| arrivals$durStayCalc == 9999,8,arrivals$durStayCode)
+
 #Step 1.9 - Write arrivals to db
 arrivals$N <- 1
 dbWriteTable(mydb, "arrivals", arrivals, overwrite = TRUE)
@@ -217,7 +265,7 @@ departure <- departure |>
     month = month(dateDeparture),
     year = year(dateDeparture)
   )
-
+departure$yearMonth <- paste0(departure$year,"-",departure$month)
 #Step 2.3 - Check for years that may be incorrect. Drop record if it cannot be corrected.
 curYearD <- max(departure$year)
 departure$curYearD <- curYearD
@@ -242,19 +290,53 @@ departure$resident[is.na(departure$resident)] <- "Missing"
 #Step 2.6 - Calculate age
 departure$dobYear <- year(departure$dob)
 departure$age <- departure$year - departure$dobYear
-#!!!Note: Age is only missing if either date of arrival or date of birth is missing. In all cases, these variables
-# should not be missing.
+
+#imputing missing and erroneous ages
+#Mean age by year month
+departureMeanAgeYM <- departure
+departureMeanAgeYM <- departureMeanAgeYM[!is.na(departureMeanAgeYM$age), ]
+departureMeanAgeYM <- departureMeanAgeYM%>%
+  group_by(yearMonth)%>%
+  summarise(meanAgeYM = round(mean(age),0))
+departure <- merge(departure, departureMeanAgeYM, by = "yearMonth", All = TRUE)
+
+#Mean age by date
+departureMeanAgeDate <- departure
+departureMeanAgeDate <- departureMeanAgeDate[!is.na(departureMeanAgeDate$age), ]
+departureMeanAgeDate <- departureMeanAgeDate%>%
+  group_by(dateDeparture)%>%
+  summarise(meanAgeDate = round(mean(age),0))
+departure <- merge(departure, departureMeanAgeDate, by = "dateDeparture", All = TRUE)
+
+#Mean age by year
+departureMeanAgeY <- departure
+departureMeanAgeY <- departureMeanAgeY[!is.na(departureMeanAgeY$age), ]
+departureMeanAgeY <- departureMeanAgeY%>%
+  group_by(year)%>%
+  summarise(meanAgeY = round(mean(age),0))
+departure <- merge(departure, departureMeanAgeY, by = "year", All = TRUE)
+
+departure$corrAge <- ifelse(is.na(departure$age), departure$meanAgeDate, departure$age)
+departure$corrAge <- ifelse(is.na(departure$corrAge), departure$meanAgeYM, departure$corrAge)
+departure$corrAge <- ifelse(is.na(departure$corrAge), departure$meanAgeY, departure$corrAge)
+departure$corrAge <- ifelse(departure$corrAge <0 | departure$corrAge>99, departure$meanAgeDate, departure$corrAge)
+departure$corrAge <- ifelse(departure$corrAge <0 | departure$corrAge>99, departure$meanAgeYM, departure$corrAge)
+departure$corrAge <- ifelse(departure$corrAge <0 | departure$corrAge>99, departure$meanAgeY, departure$corrAge)
+
+#Do final check to ensure there no missing or erroneous ages
+departure$corrAgeChk[is.na(departure$corrAge)] <- "Mis"
+departure$corrAgeChk <- ifelse(departure$corrAge <0 | departure$corrAge>99, "Err", "Ok")
 
 #Step 1.5 - Get age groups, sex, duration away, resident status, transport, 
 departure <- departure |>
   mutate(myAgeGroup = case_when(
-    age <= 10 ~ "0 to 10",
-    age <= 20 ~ "11 to 20",
-    age <= 30 ~ "21 to 30",
-    age <= 40 ~ "31 to 40",
-    age <= 50 ~ "41 to 50",
-    age <= 60 ~ "51 to 60",
-    age <= 70 ~ "61 to 70",
+    corrAge <= 10 ~ "0 to 10",
+    corrAge <= 20 ~ "11 to 20",
+    corrAge <= 30 ~ "21 to 30",
+    corrAge <= 40 ~ "31 to 40",
+    corrAge <= 50 ~ "41 to 50",
+    corrAge <= 60 ~ "51 to 60",
+    corrAge <= 70 ~ "61 to 70",
     TRUE ~ "71+"   
   ),
   #Changing labels for sex, resident status, and transport mode
@@ -316,8 +398,16 @@ departure <- departure |>
     TRUE ~ 7
   )
 )
-departure$myAgeGroup <- ifelse(departure$age > 99, "ERROR",departure$myAgeGroup)
-departure$myAgeGroup[is.na(departure$age)] <- "Missing"
+
+departure$myAgeGroup <- ifelse(departure$corrAgeChk == "Err", "Err",departure$myAgeGroup)
+departure$myAgeGroup <- ifelse(departure$corrAgeChk == "Mis", "Mis",departure$myAgeGroup)
+
+#Checking days away calculations and days away group assignment
+departure$daysAway[is.na(departure$daysAway)] <- 8888
+departure$daysAway<- ifelse(departure$daysAway <= 0,9999, departure$daysAway)
+departure$stayAwayGroup <- ifelse(departure$daysAway == 8888, "Missing", departure$stayAwayGroup)
+departure$stayAwayGroup <- ifelse(departure$daysAway == 9999, "Error", departure$stayAwayGroup)
+
 #Step 2.9 - Write departure to db
 departure <- departure[!is.na(departure$flightship), ]
 departure$N <- 1

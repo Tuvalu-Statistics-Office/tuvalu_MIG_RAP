@@ -5,11 +5,16 @@ setwd(repository)
 #Load setup file
 source("R/function/setup.R")
 
+#Staff to specify year and months for release tables
 startYear = 2024
 endYear = 2024
 
 startMonth = 1
 endMonth = 6
+
+#Staff to specify year and quarter for population estimate tables
+pop_est_year = 2024
+pop_est_qtr = 2
 
 #Connect to db
 mydb <- dbConnect(RSQLite::SQLite(), "data/migration.db")
@@ -310,26 +315,26 @@ write.xlsx(tab1,"output/ArrDep_Match.xlsx", asTable = FALSE, overwrite = TRUE)
 #Exporting tables that for population estimates
 #--------------------------------------------------------------------------------------------------------------
 #Note: ASO to change the year and the range for month
-tab2 <- dbGetQuery(mydb,"SELECT year, month, age, sex, N FROM arrivals WHERE resident = 1")
+tab2 <- dbGetQuery(mydb,"SELECT year, month, corrAge, sex, quarter, N FROM arrivals WHERE resident = 1")
 tab2 <- tab2 |>
-  filter((year >= startYear & year <= endYear) & (month >= startMonth & month <= endMonth))
+  filter(year == pop_est_year & quarter == pop_est_qtr)
 pt <- PivotTable$new()
 pt$addData(tab2)
 pt$addColumnDataGroups("sex")
-pt$addRowDataGroups("age")
+pt$addRowDataGroups("corrAge")
 pt$defineCalculation(calculationName="Resident_Arrivals", summariseExpression="format(round(sum(N), 0), big.mark = ',')")
 pt$renderPivot()
 addWorksheet(wb, "Res_Arr")
 pt$writeToExcelWorksheet(wb=wb, wsName="Res_Arr", 
                          topRowNumber=1, leftMostColumnNumber=1, applyStyles=TRUE, mapStylesFromCSS=TRUE)
 
-tab3 <- dbGetQuery(mydb,"SELECT year, month, age, sex, N FROM departure WHERE resident = 1")
+tab3 <- dbGetQuery(mydb,"SELECT year, month, corrAge, sex, quarter, N FROM departure WHERE resident = 1")
 tab3 <- tab3 |>
-  filter((year >= startYear & year <= endYear) & (month >= startMonth & month <= endMonth))
+  filter(year == pop_est_year & quarter == pop_est_qtr)
 pt <- PivotTable$new()
 pt$addData(tab3)
 pt$addColumnDataGroups("sex")
-pt$addRowDataGroups("age")
+pt$addRowDataGroups("corrAge")
 pt$defineCalculation(calculationName="Resident_Departures", summariseExpression="format(round(sum(N), 0), big.mark = ',')")
 pt$renderPivot()
 addWorksheet(wb, "Res_Dep")
