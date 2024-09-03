@@ -341,4 +341,16 @@ addWorksheet(wb, "Res_Dep")
 pt$writeToExcelWorksheet(wb=wb, wsName="Res_Dep", 
                          topRowNumber=1, leftMostColumnNumber=1, applyStyles=TRUE, mapStylesFromCSS=TRUE)
 saveWorkbook(wb, file="output/pop_est_mig.xlsx", overwrite = TRUE)
+
+#--------------------------------------------------------------------------------------------------------------
+#Exporting cleaned microdata for arrivals and departure
+#--------------------------------------------------------------------------------------------------------------
+tab4 <- dbGetQuery(mydb,"SELECT * FROM arrivals")
+tab4$dateArrival <- convertToDateTime(tab4$dateArrival, origin = "1970-01-01")
+write.xlsx(tab4,"output/Arrivals_Cleaned.xlsx", asTable = FALSE, overwrite = TRUE)
+
+tab5 <- dbGetQuery(mydb,"SELECT * FROM departure")
+tab5$dateDeparture <- convertToDateTime(tab5$dateDeparture, sorigin = "1970-01-01")
+write.xlsx(tab5,"output/Departures_Cleaned.xlsx", asTable = FALSE, overwrite = TRUE)
+
 dbDisconnect(mydb)

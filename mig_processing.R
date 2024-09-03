@@ -428,6 +428,8 @@ depDates$monthD <- month(depDates$dateD)
 dbWriteTable(mydb, "depDates", depDates, overwrite = TRUE)
 
 match <- dbGetQuery(mydb,"SELECT * FROM arrDates FULL OUTER JOIN depDates ON arrDates.dateA = depDates.dateD GROUP BY arrDates.dateArrival, depDates.dateDeparture")
+match$chk <- ifelse(is.na(match$dateArrival) & !is.na(match$dateDeparture), "Check Arrival", "Ok")
+match$chk <- ifelse(!is.na(match$dateArrival) & is.na(match$dateDeparture), "Check Departure",match$chk)
 dbWriteTable(mydb, "match", match, overwrite = TRUE)
 
 dbDisconnect(mydb)
