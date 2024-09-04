@@ -93,11 +93,3 @@ visitors_combine <- visitors_combine |>
 
 #Write final dataframe to csv file
 write.csv(visitors_combine, "output/visitors_arrival_tv.csv", row.names = FALSE)
-
-
-
-
-
-
-
-
