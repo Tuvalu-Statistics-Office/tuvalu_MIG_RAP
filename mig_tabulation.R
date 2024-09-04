@@ -314,6 +314,7 @@ write.xlsx(tab1,"output/ArrDep_Match.xlsx", asTable = FALSE, overwrite = TRUE)
 #--------------------------------------------------------------------------------------------------------------
 #Exporting tables that for population estimates
 #--------------------------------------------------------------------------------------------------------------
+wb <- createWorkbook(creator = Sys.getenv("USERNAME"))
 #Note: ASO to change the year and the range for month
 tab2 <- dbGetQuery(mydb,"SELECT year, month, corrAge, sex, quarter, N FROM arrivals WHERE resident = 1")
 tab2 <- tab2 |>
