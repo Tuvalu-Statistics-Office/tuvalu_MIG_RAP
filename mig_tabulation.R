@@ -6,15 +6,15 @@ setwd(repository)
 source("R/function/setup.R")
 
 #Staff to specify year and months for release tables
-startYear = 2024
-endYear = 2024
+startYear = 2025
+endYear = 2025
 
 startMonth = 1
-endMonth = 6
+endMonth = 12
 
 #Staff to specify year and quarter for population estimate tables
-pop_est_year = 2024
-pop_est_qtr = 2
+pop_est_year = 2025
+pop_est_qtr = 1
 
 #Connect to db
 mydb <- dbConnect(RSQLite::SQLite(), "data/migration.db")

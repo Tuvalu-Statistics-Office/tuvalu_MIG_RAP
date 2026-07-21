@@ -11,8 +11,10 @@
 repository <- file.path(dirname(rstudioapi::getSourceEditorContext()$path))
 setwd(repository)
 
-#Load setup file
-source("R/function/setup.R")
+#Load set up file
+source("function/setup.R")
+source("function/functions.R")
+library(tcltk2)
 
 #Import excel files for both arrivals and departures
 arrivals <- read_excel("data/arrivals.xlsx")
@@ -27,7 +29,7 @@ mydb <- dbConnect(RSQLite::SQLite(), "data/migration.db")
 #Step 1.0 - Renaming ad deleting columns and rows
 arrivals <- arrivals |>
   #filter out records with no arrival dates
-  filter(!is.na(`DATE OF ARRIVAL`)) |>
+  #filter(!is.na(`DATE OF ARRIVAL`)) |>
   #rename the columns
   rename(
     flightship = `FLIGHT/ SHIP#`,
@@ -70,7 +72,18 @@ arrivals <- arrivals |>
     year = year(dateArrival)
   )
 #!!!Note: ASO should always check the formats of the dates.
+if(any(is.na(arrivals$year))){
+  tkmessageBox(title = "Missing Key Data - Arrivals",
+               message = "Arrivals data has missing year.",
+               icon = "info",type="ok")
+}
+#If the message box appears, then check for missing entries and make proper verification
+#-------------------------------------------------------------------------------
+#This block is to remove missing entries. This should only be done after verification
 
+arrivals <- arrivals[!is.na(arrivals$year), ]
+
+#-------------------------------------------------------------------------------
 #Step 1.1 - Check for years that may be incorrect. Drop record if it cannot be corrected.
 curYearA <- max(arrivals$year)
 arrivals$curYearA <- curYearA
@@ -79,8 +92,8 @@ arrivals$yearMonth <- paste0(arrivals$year,"-",arrivals$month)
 
 #Step 1.2 - Get country description, region code, and region description
 country_region <- read_excel("data/country_region.xlsx") #load country and region file
-arrivals <- merge(arrivals, country_region, by = "countryCode", all = TRUE) #merge files
-arrivals <- arrivals[!is.na(arrivals$flightship), ] #drop empty rows
+arrivals <- left_join(arrivals, country_region, by = "countryCode") #merge files
+#arrivals <- arrivals[!is.na(arrivals$flightship), ] #drop empty rows
 arrivals$countryCode[is.na(arrivals$countryCode)] <- "Missing"
 arrivals$countryName[is.na(arrivals$countryName)] <- "Missing"
 arrivals$regionCode[is.na(arrivals$regionCode)] <- "Missing"
@@ -265,6 +278,18 @@ departure <- departure |>
     month = month(dateDeparture),
     year = year(dateDeparture)
   )
+if(any(is.na(departure$year))){
+  tkmessageBox(title = "Missing Key Data - Departure",
+               message = "Departure data has missing year.",
+               icon = "info",type="ok")
+}
+#If the message box appears, then check for missing entries and make proper verification
+#-------------------------------------------------------------------------------
+#This block is to remove missing entries. This should only be done after verification
+
+departure <- departure[!is.na(departure$year), ]
+
+#-------------------------------------------------------------------------------
 departure$yearMonth <- paste0(departure$year,"-",departure$month)
 #Step 2.3 - Check for years that may be incorrect. Drop record if it cannot be corrected.
 curYearD <- max(departure$year)
@@ -273,7 +298,7 @@ departure$curYearD <- curYearD
 #!!!Note: Dropping is a result of incorrect dates. ASO should check the dates.
 
 #Step 2.4 - Get country description, region code, and region description
-departure <- merge(departure, country_region, by = "countryCode", all = TRUE) #merge files
+departure <- left_join(departure, country_region, by = "countryCode") #merge files
 #departure <- departure[!is.na(departure$flightship), ] #drop empty rows
 departure$countryCode[is.na(departure$countryCode)] <- "Missing"
 departure$countryName[is.na(departure$countryName)] <- "Missing"
