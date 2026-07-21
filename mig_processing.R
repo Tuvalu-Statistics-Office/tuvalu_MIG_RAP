@@ -85,6 +85,10 @@ arrivals <- arrivals[!is.na(arrivals$year), ]
 
 #-------------------------------------------------------------------------------
 #Step 1.1 - Check for years that may be incorrect. Drop record if it cannot be corrected.
+#Checking NAs in years
+arrivals <- arrivals |>
+  #filter out records with NA years
+  filter(!is.na(year))
 curYearA <- max(arrivals$year)
 arrivals$curYearA <- curYearA
 arrivals <- arrivals[arrivals$year > curYearA-10, ]
