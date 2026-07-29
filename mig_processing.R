@@ -72,11 +72,11 @@ arrivals <- arrivals |>
     year = year(dateArrival)
   )
 #!!!Note: ASO should always check the formats of the dates.
-if(any(is.na(arrivals$year))){
-  tkmessageBox(title = "Missing Key Data - Arrivals",
-               message = "Arrivals data has missing year.",
-               icon = "info",type="ok")
-}
+#if(any(is.na(arrivals$year))){
+#  tkmessageBox(title = "Missing Key Data - Arrivals",
+#               message = "Arrivals data has missing year.",
+#               icon = "info",type="ok")
+#}
 #If the message box appears, then check for missing entries and make proper verification
 #-------------------------------------------------------------------------------
 #This block is to remove missing entries. This should only be done after verification
@@ -282,11 +282,11 @@ departure <- departure |>
     month = month(dateDeparture),
     year = year(dateDeparture)
   )
-if(any(is.na(departure$year))){
-  tkmessageBox(title = "Missing Key Data - Departure",
-               message = "Departure data has missing year.",
-               icon = "info",type="ok")
-}
+#if(any(is.na(departure$year))){
+#  tkmessageBox(title = "Missing Key Data - Departure",
+#               message = "Departure data has missing year.",
+#               icon = "info",type="ok")
+#}
 #If the message box appears, then check for missing entries and make proper verification
 #-------------------------------------------------------------------------------
 #This block is to remove missing entries. This should only be done after verification

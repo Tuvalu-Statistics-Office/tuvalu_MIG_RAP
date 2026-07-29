@@ -6,7 +6,7 @@ setwd(repository)
 source("R/function/setup.R")
 
 #Staff to specify year and months for release tables
-startYear = 2025
+startYear = 2024
 endYear = 2025
 
 startMonth = 1
@@ -42,6 +42,7 @@ arrCountry <- arrCountry |>
 
 pt <- PivotTable$new()
 pt$addData(arrCountry)
+pt$addColumnDataGroups("year")
 pt$addColumnDataGroups("month")
 pt$addColumnDataGroups("monthDesc", addTotal = FALSE)
 pt$addColumnDataGroups("gender")
@@ -56,6 +57,7 @@ pt$writeToExcelWorksheet(wb=wb, wsName="tableA1",
 #--------------------------------------------------------------------------------------------------------------
 pt <- PivotTable$new()
 pt$addData(arrCountry)
+pt$addColumnDataGroups("year")
 pt$addColumnDataGroups("month")
 pt$addColumnDataGroups("monthDesc", addTotal = FALSE)
 pt$addColumnDataGroups("gender")
@@ -71,6 +73,7 @@ pt$writeToExcelWorksheet(wb=wb, wsName="tableA2",
 #--------------------------------------------------------------------------------------------------------------
 pt <- PivotTable$new()
 pt$addData(arrCountry)
+pt$addColumnDataGroups("year")
 pt$addColumnDataGroups("purpVisit")
 pt$addColumnDataGroups("purpVisitDesc", addTotal = FALSE)
 pt$addColumnDataGroups("gender")
@@ -88,6 +91,7 @@ tableA1 <- tableA1 |>
   filter((year >= startYear & year <= endYear) & (month >= startMonth & month <= endMonth))
 pt <- PivotTable$new()
 pt$addData(tableA1)
+pt$addColumnDataGroups("year")
 pt$addColumnDataGroups("month")
 pt$addColumnDataGroups("monthDesc", addTotal = FALSE)
 pt$addColumnDataGroups("gender")
@@ -105,6 +109,7 @@ tableA2 <- tableA2 |>
   filter((year >= startYear & year <= endYear) & (month >= startMonth & month <= endMonth))
 pt <- PivotTable$new()
 pt$addData(tableA2)
+pt$addColumnDataGroups("year")
 pt$addColumnDataGroups("transport")
 pt$addColumnDataGroups("gender")
 pt$addRowDataGroups("resident")
@@ -124,6 +129,7 @@ tableA3 <- tableA3 |>
   filter((year >= startYear & year <= endYear) & (month >= startMonth & month <= endMonth))
 pt <- PivotTable$new()
 pt$addData(tableA3)
+pt$addColumnDataGroups("year")
 pt$addColumnDataGroups("month")
 pt$addColumnDataGroups("monthDesc", addTotal = FALSE)
 pt$addRowDataGroups("durStayCode")
@@ -138,6 +144,7 @@ pt$writeToExcelWorksheet(wb=wb, wsName="tableA6",
 #--------------------------------------------------------------------------------------------------------------
 pt <- PivotTable$new()
 pt$addData(tableA2)
+pt$addColumnDataGroups("year")
 pt$addColumnDataGroups("month")
 pt$addColumnDataGroups("monthDesc", addTotal = FALSE)
 pt$addColumnDataGroups("gender")
@@ -154,6 +161,7 @@ pt$writeToExcelWorksheet(wb=wb, wsName="tableA7",
 #--------------------------------------------------------------------------------------------------------------
 pt <- PivotTable$new()
 pt$addData(tableA2)
+pt$addColumnDataGroups("year")
 pt$addColumnDataGroups("resident")
 pt$addColumnDataGroups("resid", addTotal = FALSE)
 pt$addColumnDataGroups("gender")
@@ -179,6 +187,7 @@ tableD1 <- tableD1 |>
   filter((year >= startYear & year <= endYear) & (month >= startMonth & month <= endMonth))
 pt <- PivotTable$new()
 pt$addData(tableD1)
+pt$addColumnDataGroups("year")
 pt$addColumnDataGroups("resident")
 pt$addColumnDataGroups("resid", addTotal = FALSE)
 pt$addColumnDataGroups("gender")
